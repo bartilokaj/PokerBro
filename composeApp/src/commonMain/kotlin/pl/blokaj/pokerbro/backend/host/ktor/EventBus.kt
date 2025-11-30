@@ -2,7 +2,7 @@ package pl.blokaj.pokerbro.backend.host.ktor
 
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import pl.blokaj.pokerbro.backend.shared.Event
+import pl.blokaj.pokerbro.shared.Event
 
 class EventBus {
     private val _events = MutableSharedFlow<Event>()

@@ -1,8 +1,10 @@
 package pl.blokaj.pokerbro.ui.screens.components
 
 import com.arkivanov.decompose.ComponentContext
+import com.arkivanov.decompose.childContext
 import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
+import io.ktor.http.ContentDisposition.Companion.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -16,27 +18,24 @@ import pl.blokaj.pokerbro.ui.services.interfaces.ProfilePicturePicker
 
 class JoiningComponent (
     componentContext: ComponentContext,
-    profilePicturePicker: ProfilePicturePicker
+    profilePicturePicker: ProfilePicturePicker,
+    initialName: String,
+    var onLobbySearch: (String, String) -> Unit
 ) : ComponentContext by componentContext {
-    private val scope = CoroutineScope(Dispatchers.IO)
-    private val lobbyFlow = MutableSharedFlow<Lobby>()
-    private var _playerName = MutableValue<String>("")
+    private var _playerName = MutableValue<String>(initialName)
 
     val playerName: Value<String> get() = _playerName
-    val lobbyComponent = FlowListComponent<Lobby>(componentContext, lobbyFlow, {})
-    val profilePictureComponent = ProfilePictureComponent(componentContext, {})
+    val profilePictureComponent = ProfilePictureComponent(
+        componentContext = childContext("profile picture"),
+        setPath = {}
+    )
 
     fun setPlayerName(name: String) {
         _playerName.value = name
     }
 
-    fun startSearchingForLobby() {
-        println("Starting searching for lobbies")
-        scope.launch {
-            startGameSearching("barti", lobbyFlow)
-        }
+    fun updatePlayerDetails() {
+        val imageString = profilePictureComponent.getImageString()
+        onLobbySearch(_playerName.value, imageString)
     }
-
-
-
 }

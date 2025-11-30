@@ -1,7 +1,6 @@
-package pl.blokaj.pokerbro.backend.shared
+package pl.blokaj.pokerbro.shared
 
 import kotlinx.serialization.Serializable
-import kotlin.io.encoding.Base64
 
 @Serializable
 sealed interface EventPayload

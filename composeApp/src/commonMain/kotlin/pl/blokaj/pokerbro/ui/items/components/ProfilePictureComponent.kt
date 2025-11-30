@@ -11,4 +11,7 @@ class ProfilePictureComponent(
     private val _profilePicturePath = MutableValue<String>("")
     val profilePicturePath: Value<String> get() = _profilePicturePath
 
+    fun getImageString(): String {
+        return ""
+    }
 }

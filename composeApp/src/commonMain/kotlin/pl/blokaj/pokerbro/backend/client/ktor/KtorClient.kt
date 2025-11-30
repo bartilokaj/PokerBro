@@ -7,7 +7,6 @@ import io.ktor.utils.io.readText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -16,12 +15,14 @@ data class Lobby(val hostname: String, val ip: String, val port: Int)
 
 private const val SEARCHING_PORT = 8888
 
-suspend fun CoroutineScope.startGameSearching(playerName: String, lobbyFlow: MutableSharedFlow<Lobby>): Job {
+fun CoroutineScope.startGameSearching(lobbyFlow: MutableSharedFlow<Lobby>): Job {
     val selectorManager = SelectorManager()
     val lobbySet = ThreadSafeSet<Lobby>()
 
     return launch {
-        val socket = aSocket(selectorManager).udp().bind { InetSocketAddress("0.0.0.0", SEARCHING_PORT) }
+        val socket = aSocket(selectorManager)
+            .udp()
+            .bind(InetSocketAddress("10.0.2.15", SEARCHING_PORT), configure = { this.broadcast = true })
 
         val receiveChannel = socket.incoming
 
@@ -29,7 +30,7 @@ suspend fun CoroutineScope.startGameSearching(playerName: String, lobbyFlow: Mut
             val datagram = receiveChannel.receive()
             val message = datagram.packet.readText()
             val address = datagram.address as InetSocketAddress
-
+            println("Message received")
             // "Hostname:$serverHost;Gameport:$gamePort"
             val split = message.split(';')
             if (split.size == 2) {

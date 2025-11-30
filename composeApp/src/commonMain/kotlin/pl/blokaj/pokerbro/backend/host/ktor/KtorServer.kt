@@ -2,7 +2,6 @@ package pl.blokaj.pokerbro.backend.host.ktor
 
 import io.ktor.network.selector.SelectorManager
 import io.ktor.network.sockets.*
-import kotlin.collections.MutableSet
 import io.ktor.server.engine.*
 import io.ktor.server.application.*
 import io.ktor.server.websocket.*
@@ -10,19 +9,13 @@ import io.ktor.server.cio.*
 import io.ktor.server.routing.routing
 import io.ktor.utils.io.core.buildPacket
 import io.ktor.utils.io.core.writeText
-import io.ktor.utils.io.readText
-import io.ktor.websocket.DefaultWebSocketSession
 import io.ktor.websocket.Frame
-import io.ktor.websocket.Frame.Text
 import io.ktor.websocket.readText
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.broadcast
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.serialization.json.Json
 import pl.blokaj.pokerbro.serverLogBus
-import pl.blokaj.pokerbro.backend.shared.Event
+import pl.blokaj.pokerbro.shared.Event
 
 
 const val GAME_PORT = 9000
@@ -31,7 +24,6 @@ const val UDP_PORT = 8888
 
 fun startServer(hostName: String, scope: CoroutineScope) {
     val bus = EventBus()
-    serverLogBus.logs.tryEmit("Starting udp service and network bus\n")
     val discoveryService = scope.startUdpDiscoveryService(hostName, UDP_PORT, GAME_PORT)
     val connectionManager = ConnectionManager(scope)
     val eventBridge = scope.startBusToNetwork(connectionManager, bus)
@@ -41,7 +33,6 @@ fun startServer(hostName: String, scope: CoroutineScope) {
             port = GAME_PORT
         })
     }) {
-        serverLogBus.logs.tryEmit("Starting websockets\n")
         module(bus)
     }.start(wait = false)
 
@@ -92,7 +83,7 @@ fun CoroutineScope.startUdpDiscoveryService(serverHost: String, udpPort: Int, ga
 
             val sendChannel = socket.outgoing
             val message = "Hostname:$serverHost;Gameport:$gamePort"
-            val broadcastAddress = InetSocketAddress("255.255.255.255", udpPort)
+            val broadcastAddress = InetSocketAddress("10.0.2.2", 9001)
 
             while (isActive) {
                 println("Sending message $message")

@@ -6,7 +6,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.arkivanov.decompose.DefaultComponentContext
 import pl.blokaj.pokerbro.ui.screens.components.HostingComponent
+import pl.blokaj.pokerbro.ui.screens.components.RootComponent
 import pl.blokaj.pokerbro.ui.screens.contents.HostingScreen
+import pl.blokaj.pokerbro.ui.screens.contents.RootCompose
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -15,26 +17,13 @@ class MainActivity : ComponentActivity() {
 
         println("created activity")
         val context = DefaultComponentContext(lifecycle)
+        val rootComponent = RootComponent(context)
         setContent {
-            App(context)
+            App(rootComponent)
         }
     }
 }
 
-class HostingActivity: ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
-        super.onCreate(savedInstanceState)
-
-        val rootContext = DefaultComponentContext(lifecycle)
-        val hostingComponent = HostingComponent(rootContext)
-
-
-        setContent {
-            HostingScreen(hostingComponent)
-        }
-    }
-}
 
 //@Preview
 //@Composable

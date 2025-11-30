@@ -1,6 +1,5 @@
 package pl.blokaj.pokerbro.ui.screens.contents
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,21 +12,18 @@ import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.arkivanov.decompose.extensions.compose.subscribeAsState
+import com.arkivanov.decompose.extensions.compose.stack.Children
 import pl.blokaj.pokerbro.ui.screens.components.MainFlowComponent
 import pl.blokaj.pokerbro.ui.items.contents.BottomBarIcon
-import pl.blokaj.pokerbro.ui.screens.components.FlowScreen
+import pl.blokaj.pokerbro.ui.screens.components.FlowChild
 
 @Composable
 fun MainFlow(
     flowComponent: MainFlowComponent
 ) {
-    val currentScreen by flowComponent.currentFlowScreen.subscribeAsState()
-
     Scaffold(
         bottomBar = {
             BottomAppBar(
@@ -72,11 +68,11 @@ fun MainFlow(
         }
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
-            Crossfade(targetState = currentScreen) { screen ->
-                when (screen) {
-                    is FlowScreen.Joining -> JoiningScreen(flowComponent.joiningComponent)
-                    is FlowScreen.Home -> HomeScreen(flowComponent.homeComponent)
-                    is FlowScreen.Hosting -> HostingScreen(flowComponent.hostingComponent)
+            Children(stack = flowComponent.flowChildStack) { child ->
+                when (val instance = child.instance) {
+                    is FlowChild.Home -> HomeScreen(instance.component)
+                    is FlowChild.Joining -> JoiningScreen(instance.component)
+                    is FlowChild.Hosting -> HostingScreen(instance.component)
                 }
             }
         }
