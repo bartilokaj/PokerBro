@@ -14,17 +14,22 @@ import io.ktor.websocket.readText
 import kotlinx.coroutines.*
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.serialization.json.Json
+import pl.blokaj.pokerbro.backend.LanNetworkManager
 import pl.blokaj.pokerbro.serverLogBus
 import pl.blokaj.pokerbro.shared.Event
 
 
-const val GAME_PORT = 9000
-const val UDP_PORT = 8888
+const val GAME_PORT = 50001
+const val UDP_PORT = 57286
 
 
-fun startServer(hostName: String, scope: CoroutineScope) {
+
+
+
+fun startServer(lanNetworkManager: LanNetworkManager, hostName: String, scope: CoroutineScope) {
+    val ip = lanNetworkManager.getIpAddresses()
     val bus = EventBus()
-    val discoveryService = scope.startUdpDiscoveryService(hostName, UDP_PORT, GAME_PORT)
+    val discoveryService = scope.startUdpDiscoveryService(lanNetworkManager, hostName)
     val connectionManager = ConnectionManager(scope)
     val eventBridge = scope.startBusToNetwork(connectionManager, bus)
     embeddedServer(CIO, configure = {
@@ -69,32 +74,38 @@ fun CoroutineScope.startBusToNetwork(connectionManager: ConnectionManager, event
     }
 }
 
-fun CoroutineScope.startUdpDiscoveryService(serverHost: String, udpPort: Int, gamePort: Int): Job {
-    val selectorManager = SelectorManager(Dispatchers.IO)
-
+fun CoroutineScope.startUdpDiscoveryService(lanNetworkManager: LanNetworkManager, serverHost: String): Job {
     return launch {
-        try {
-            println("Binding socket in 0.0.0.0 and port $udpPort\n")
+        lanNetworkManager.withBroadcastLock {
+            val selectorManager = SelectorManager(Dispatchers.IO)
+            try {
+                val ipAddresses = lanNetworkManager.getIpAddresses()
+                val broadcastAddresses = lanNetworkManager
+                    .getBroadcastAddresses()
+                    .map { InetSocketAddress(it, UDP_PORT) }
+                val sockets = ipAddresses.map { ip ->
+                    aSocket(selectorManager)
+                        .udp()
+                        .bind(InetSocketAddress(ip, UDP_PORT), configure = { this.broadcast = true })
+                }
+                val channels = sockets.map { it.outgoing }
+                val message = "Hostname:$serverHost;Gameport:$GAME_PORT"
+                var counter = 0
 
-            val socket = aSocket(selectorManager)
-                .udp()
-                .bind(InetSocketAddress("0.0.0.0", udpPort), configure = { this.broadcast = true })
-
-
-            val sendChannel = socket.outgoing
-            val message = "Hostname:$serverHost;Gameport:$gamePort"
-            val broadcastAddress = InetSocketAddress("10.0.2.2", 9001)
-
-            while (isActive) {
-                println("Sending message $message")
-                serverLogBus.logs.emit("Sending message $message")
-                val packet = buildPacket({ writeText(message) })
-                val datagram = Datagram(packet, broadcastAddress)
-                sendChannel.send(datagram)
-                delay(5.seconds)
+                while (isActive) {
+                    for (i in 0..<ipAddresses.size) {
+                        println("Sending to ${ipAddresses[i]}")
+                        val packet = buildPacket({ writeText(message) })
+                        val datagram = Datagram(packet, broadcastAddresses[i])
+                        channels[i].send(datagram)
+                    }
+                    counter += 1
+                    delay(5.seconds)
+                }
+            } finally {
+                selectorManager.close()
             }
-        } finally {
-            selectorManager.close()
+
         }
     }
 }

@@ -15,6 +15,8 @@ kotlin {
             jvmTarget.set(JvmTarget.JVM_11)
         }
     }
+
+    jvm()
     
     listOf(
         iosArm64(),
@@ -28,8 +30,15 @@ kotlin {
 
     sourceSets {
         androidMain.dependencies {
-            implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.lifecycle.viewmodelCompose)
+            implementation(libs.androidx.lifecycle.runtimeCompose)
+            implementation(libs.androidx.navigation.compose)
+        }
+
+        jvmMain.dependencies {
+            implementation(compose.desktop.currentOs)
+            implementation(libs.kotlinx.coroutines.swing)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -38,9 +47,6 @@ kotlin {
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
-            implementation(libs.androidx.lifecycle.viewmodelCompose)
-            implementation(libs.androidx.lifecycle.runtimeCompose)
-            implementation(libs.androidx.navigation.compose)
             implementation(libs.ktor.server.cio)
             implementation(libs.ktor.server.core)
             implementation(libs.ktor.server.websockets)
@@ -53,6 +59,9 @@ kotlin {
             implementation(libs.decompose.extensions.compose)
             implementation(libs.coil)
             implementation(libs.coil.compose)
+            implementation(libs.lifecycle)
+            implementation(libs.essenty.lifecycle.coroutines)
+            implementation(libs.kermit)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -91,3 +100,19 @@ dependencies {
     debugImplementation(compose.uiTooling)
 }
 
+compose.desktop {
+    application {
+        mainClass = "MainKt"
+
+        nativeDistributions {
+            targetFormats(
+                TargetFormat.Dmg,
+                TargetFormat.Msi,
+                TargetFormat.Deb
+            )
+
+            packageName = "PokerBro"
+            packageVersion = "1.0.0"
+        }
+    }
+}

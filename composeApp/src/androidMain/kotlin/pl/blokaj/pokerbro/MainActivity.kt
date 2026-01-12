@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.arkivanov.decompose.DefaultComponentContext
+import pl.blokaj.pokerbro.backend.LanNetworkManager
 import pl.blokaj.pokerbro.ui.screens.components.HostingComponent
 import pl.blokaj.pokerbro.ui.screens.components.RootComponent
 import pl.blokaj.pokerbro.ui.screens.contents.HostingScreen
@@ -15,9 +16,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
-        println("created activity")
         val context = DefaultComponentContext(lifecycle)
-        val rootComponent = RootComponent(context)
+        val lanNetworkManager = LanNetworkManager(this)
+        val rootComponent = RootComponent(context, lanNetworkManager)
         setContent {
             App(rootComponent)
         }

@@ -58,16 +58,15 @@ class MainFlowComponent(
         flowScreenStack.bringToFront(FlowScreen.Hosting)
     }
 
-}
+    sealed interface FlowScreen {
+        object Home: FlowScreen
+        object Joining: FlowScreen
+        object Hosting: FlowScreen
+    }
 
-sealed interface FlowScreen {
-    object Home: FlowScreen
-    object Joining: FlowScreen
-    object Hosting: FlowScreen
-}
-
-sealed interface FlowChild {
-    class Home(val component: HomeComponent) : FlowChild
-    class Joining(val component: JoiningComponent) : FlowChild
-    class Hosting(val component: HostingComponent) : FlowChild
+    sealed interface FlowChild {
+        class Home(val component: HomeComponent) : FlowChild
+        class Joining(val component: JoiningComponent) : FlowChild
+        class Hosting(val component: HostingComponent) : FlowChild
+    }
 }

@@ -11,16 +11,22 @@ androidx-lifecycle = "2.9.5"
 androidx-testExt = "1.3.0"
 androidx-navigation = "2.7.3"
 composeMultiplatform = "1.9.1"
+coroutines = "1.3.3"
 junit = "4.13.2"
+kermit = "2.0.8"
 kotlin = "2.2.20"
+kotlinxCoroutinesSwing = "1.10.2"
 ktor = "3.3.3"
 kotlinx = "1.9.0"
 decompose = "3.1.0"
 coil = "3.3.0"
+lifecycle = "2.5.0"
 
 [libraries]
+kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
+kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "kotlinxCoroutinesSwing" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx"}
 junit = { module = "junit:junit", version.ref = "junit" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidx-core" }
@@ -41,6 +47,9 @@ decompose = { module = "com.arkivanov.decompose:decompose", version.ref = "decom
 decompose-extensions-compose = { module = "com.arkivanov.decompose:extensions-compose", version.ref = "decompose" }
 coil = { module = "io.coil-kt.coil3:coil", version.ref = "coil"}
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil"}
+lifecycle = { module = "com.arkivanov.essenty:lifecycle", version.ref = "lifecycle" }
+essenty-lifecycle-coroutines = { module = "com.arkivanov.essenty:lifecycle-coroutines", version.ref = "lifecycle" }
+
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
