@@ -18,10 +18,10 @@ import androidx.compose.ui.unit.dp
 import com.arkivanov.decompose.extensions.compose.stack.Children
 import pl.blokaj.pokerbro.ui.screens.components.MainFlowComponent
 import pl.blokaj.pokerbro.ui.items.contents.BottomBarIcon
-import pl.blokaj.pokerbro.ui.screens.components.FlowChild
+
 
 @Composable
-fun MainFlow(
+fun MainFlowScreen(
     flowComponent: MainFlowComponent
 ) {
     Scaffold(
@@ -70,9 +70,9 @@ fun MainFlow(
         Box(modifier = Modifier.padding(innerPadding)) {
             Children(stack = flowComponent.flowChildStack) { child ->
                 when (val instance = child.instance) {
-                    is FlowChild.Home -> HomeScreen(instance.component)
-                    is FlowChild.Joining -> JoiningScreen(instance.component)
-                    is FlowChild.Hosting -> HostingScreen(instance.component)
+                    is MainFlowComponent.FlowChild.Home -> HomeScreen(instance.component)
+                    is MainFlowComponent.FlowChild.Joining -> JoiningScreen(instance.component)
+                    is MainFlowComponent.FlowChild.Hosting -> HostingScreen(instance.component)
                 }
             }
         }

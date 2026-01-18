@@ -10,10 +10,18 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.arkivanov.decompose.childContext
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
+import pl.blokaj.pokerbro.ui.items.components.FlowListComponent
+import pl.blokaj.pokerbro.ui.items.contents.ConfirmationDialog
 import pl.blokaj.pokerbro.ui.items.contents.ListContent
 import pl.blokaj.pokerbro.ui.items.contents.ProfilePicture
 import pl.blokaj.pokerbro.ui.items.contents.TextInputField
@@ -21,7 +29,11 @@ import pl.blokaj.pokerbro.ui.screens.components.JoiningComponent
 import pl.blokaj.pokerbro.ui.screens.components.LobbySearchComponent
 
 @Composable
-fun LobbySearchScreen(lobbySearchComponent: LobbySearchComponent) {
+fun LobbySearchScreen(
+    lobbySearchComponent: LobbySearchComponent
+) {
+    val selectedLobby by lobbySearchComponent.selectedLobby.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -34,5 +46,14 @@ fun LobbySearchScreen(lobbySearchComponent: LobbySearchComponent) {
         Spacer(modifier = Modifier.height(24.dp))
 
         ListContent(lobbySearchComponent.listComponent)
+    }
+
+    selectedLobby?.let { lobbyPair ->
+        ConfirmationDialog(
+            message = "Do you want to join ${lobbySearchComponent.listComponent.toStringFn(lobbyPair)}?",
+            onConfirm = { lobbySearchComponent.onLobbyConfirmed(lobbyPair) },
+            onDismiss = { lobbySearchComponent.onLobbyDismissed() }
+        )
+
     }
 }

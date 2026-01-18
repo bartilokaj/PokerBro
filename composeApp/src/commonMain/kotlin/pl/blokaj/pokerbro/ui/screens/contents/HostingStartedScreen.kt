@@ -8,10 +8,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import pl.blokaj.pokerbro.ui.screens.components.ServerStartingComponent
+import pl.blokaj.pokerbro.ui.screens.components.HostingStartedComponent
 
 @Composable
-fun ServerStartingScreen(serverStartingComponent: ServerStartingComponent) {
+fun HostingStartedScreen(hostingStartedComponent: HostingStartedComponent) {
     Column {
         Spacer(modifier = Modifier.height(40.dp))
         Text(text = "Sending udp broadcast", style = MaterialTheme.typography.headlineLarge)

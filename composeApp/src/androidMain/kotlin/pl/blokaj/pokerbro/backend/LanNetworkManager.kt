@@ -68,7 +68,6 @@ actual class LanNetworkManager(
     }
 
     actual suspend fun ensureGranted(): Boolean {
-        println(Build.VERSION.SDK_INT)
         if (Build.VERSION.SDK_INT < 33) return true
 
         val permission = Manifest.permission.NEARBY_WIFI_DEVICES

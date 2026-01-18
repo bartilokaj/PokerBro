@@ -1,4 +1,4 @@
-package pl.blokaj.pokerbro.backend.host.ktor
+package pl.blokaj.pokerbro.backend.host
 
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow

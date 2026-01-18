@@ -6,10 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.arkivanov.decompose.DefaultComponentContext
 import pl.blokaj.pokerbro.backend.LanNetworkManager
-import pl.blokaj.pokerbro.ui.screens.components.HostingComponent
 import pl.blokaj.pokerbro.ui.screens.components.RootComponent
-import pl.blokaj.pokerbro.ui.screens.contents.HostingScreen
-import pl.blokaj.pokerbro.ui.screens.contents.RootCompose
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -1,6 +1,7 @@
 package pl.blokaj.pokerbro.ui.items.components
 
 import androidx.compose.runtime.mutableStateListOf
+import co.touchlab.kermit.Logger
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
@@ -13,30 +14,28 @@ import kotlinx.coroutines.launch
 import pl.blokaj.pokerbro.ui.items.interfaces.ListComponent
 
 class FlowListComponent<T>(
-    componentContext: ComponentContext,
-    flow: MutableSharedFlow<T>,
-    private val elementClicked: (T) -> Unit
+    private val componentContext: ComponentContext,
+    private val flow: MutableSharedFlow<T>,
+    scope: CoroutineScope,
+    override var onElementClicked: (T) -> Unit,
+    override val toStringFn: (T) -> String = { it.toString() }
 ): ListComponent<T>, ComponentContext by componentContext {
     private val _elements = mutableStateListOf<T>()
-    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     override val model: Value<List<T>> = MutableValue(emptyList())
 
+    private val log = Logger.withTag("ListComponent")
 
     init {
         scope.launch {
             flow.collect { element ->
+                log.i { "Received new lobby: $element" }
                 _elements.add(element)
-                println("added $element")
                 (model as MutableValue).value = _elements.toList()
             }
         }
     }
 
-    fun onDestroy() {
-        scope.cancel()
-    }
-
-    override fun onElementClicked(element: T) {
-        elementClicked(element)
+    fun setOnClickFunction(newFun: (T) -> Unit) {
+        onElementClicked = newFun
     }
 }

@@ -6,5 +6,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class PlayerData(
     val name: String,
-    val imageString: String
+//    val imageString: String,
+    val funds: Int,
+    val id: Int
 )

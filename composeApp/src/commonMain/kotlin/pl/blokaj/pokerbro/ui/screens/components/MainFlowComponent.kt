@@ -4,17 +4,19 @@ import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.router.stack.StackNavigation
 import com.arkivanov.decompose.router.stack.bringToFront
 import com.arkivanov.decompose.router.stack.childStack
-import com.arkivanov.decompose.router.stack.push
-import com.arkivanov.decompose.router.stack.pushToFront
 import pl.blokaj.pokerbro.ui.services.implementations.PlaceholderPicker
+import kotlin.String
 
 
 class MainFlowComponent(
     private val componentContext: ComponentContext,
-    private val onLobbySearch: (String, String) -> Unit,
-    private val onHostingStart:  (String, String) -> Unit,
     private val initialPlayerName: String,
-    private val initialPlayerPicturePath: String
+    private val initialPlayerPicturePath: String,
+    private val initialLobbyName: String,
+    private val initialStartingFunds: Int,
+    private val onLobbySearch: (playerName: String) -> Unit,
+    private val onHostingStart:  (playerName: String, lobbyName: String, startingFunds: Int) -> Unit,
+    private val onWrongInput: (reason: String) -> Unit
 ): ComponentContext by componentContext {
     private val flowScreenStack = StackNavigation<FlowScreen>()
 
@@ -28,15 +30,19 @@ class MainFlowComponent(
                     JoiningComponent(
                         componentContext = context,
                         profilePicturePicker = PlaceholderPicker(),
-                        initialName = initialPlayerName,
-                        onLobbySearch = onLobbySearch
+                        initialPlayerName = initialPlayerName,
+                        onLobbySearch = onLobbySearch,
+                        onWrongInput = onWrongInput
                     )
                 )
-                FlowScreen.Hosting -> FlowChild.Hosting(HostingComponent(
+                FlowScreen.Hosting -> FlowChild.Hosting(LobbySetupComponent(
                         componentContext = context,
                         profilePicturePicker = PlaceholderPicker(),
-                        initialName = initialPlayerName,
-                        onHostingStart = onHostingStart
+                        initialPlayerName = initialPlayerName,
+                        initialLobbyName = initialLobbyName,
+                        initialStartingFunds = initialStartingFunds,
+                        onHostingStart = onHostingStart,
+                        onWrongInput = onWrongInput
                     )
                 )
             }
@@ -67,6 +73,6 @@ class MainFlowComponent(
     sealed interface FlowChild {
         class Home(val component: HomeComponent) : FlowChild
         class Joining(val component: JoiningComponent) : FlowChild
-        class Hosting(val component: HostingComponent) : FlowChild
+        class Hosting(val component: LobbySetupComponent) : FlowChild
     }
 }

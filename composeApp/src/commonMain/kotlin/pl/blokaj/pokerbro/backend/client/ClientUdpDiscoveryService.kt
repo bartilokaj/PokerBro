@@ -1,7 +1,8 @@
-package pl.blokaj.pokerbro.backend.client.ktor
+package pl.blokaj.pokerbro.backend.client
 
 import co.touchlab.kermit.Logger
 import io.ktor.network.selector.SelectorManager
+import io.ktor.network.sockets.BoundDatagramSocket
 import io.ktor.network.sockets.InetSocketAddress
 import io.ktor.network.sockets.aSocket
 import io.ktor.utils.io.CancellationException
@@ -14,28 +15,27 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import pl.blokaj.pokerbro.backend.LanNetworkManager
+import pl.blokaj.pokerbro.shared.Lobby
 import pl.blokaj.pokerbro.utility.ThreadSafeMap
 import pl.blokaj.pokerbro.utility.ThreadSafeSet
 
 private const val SEARCHING_PORT = 57286
 
-class KtorClient(
-    private val lanNetworkManager: LanNetworkManager
-) {
-    data class Lobby(val lobbyName: String, val ip: String, val port: Int)
-    private val log = Logger.withTag("Client")
-    private val foundLobbies = ThreadSafeSet<Lobby>()
-    private val lobbyMap = ThreadSafeMap<Int, Lobby>()
+object ClientUdpDiscoveryService {
+    private val log = Logger.withTag("ClientUdpService")
+    private val foundLobbies = ThreadSafeSet<Lobby>(HashSet())
 
     fun CoroutineScope.startGameSearching(
         lanNetworkManager: LanNetworkManager,
-        lobbyNameFlow: MutableSharedFlow<Pair<Int, String>>,
+        lobbyMap: ThreadSafeMap<Int, Lobby>,
+        lobbyNameFlow: MutableSharedFlow<Pair<Int, String>>
     ): Job {
         return launch {
             lanNetworkManager.withBroadcastLock {
                 val selectorManager = SelectorManager(Dispatchers.IO)
+                var socket: BoundDatagramSocket? = null
                 try {
-                    val socket = aSocket(selectorManager)
+                    socket = aSocket(selectorManager)
                         .udp()
                         .bind(
                             InetSocketAddress("0.0.0.0", SEARCHING_PORT),
@@ -46,26 +46,38 @@ class KtorClient(
                     val receivingChannel = socket.incoming
 
                     var nextId = 0
-                    log.i { "Starting to receive broadcast..." }
+                    log.i { "Starting to listen..." }
                     while (isActive) {
                         val result = receivingChannel.receiveCatching()
                         val datagram = result.getOrNull()!!
                         val message = datagram.packet.readText()
                         val address = datagram.address as InetSocketAddress
-                        // "Hostname:$serverHost;Gameport:$gamePort"
+                        if (message.length < 255) {
+                            log.i { "Received: $message" }
+                        }
+                        // "LobbyName:$lobbyName;Host:$host;Port:$lobbyPort"
                         val split = message.split(';')
-                        if (split.size == 2) {
-                            val hostNameFormat = split[0].split(':')
-                            val gamePortFormat = split[1].split(':')
-                            if (hostNameFormat[0] == "Hostname" && gamePortFormat[0] == "Gameport"
-                                && hostNameFormat.size == 2 && gamePortFormat.size == 2
+                        if (split.size == 3) {
+                            val lobbyNameSplit = split[0].split(':')
+                            val hostNameSplit = split[1].split(':')
+                            val gamePortSplit = split[2].split(':')
+
+                            if (lobbyNameSplit[0] == "LobbyName" && lobbyNameSplit.size == 2 &&
+                                hostNameSplit[0] == "Host" && hostNameSplit.size == 2 &&
+                                gamePortSplit[0] == "Port" && gamePortSplit.size == 2
                             ) {
-                                val lobbyName = hostNameFormat[1]
-                                val gamePort: Int? = gamePortFormat[1].toIntOrNull()
+                                val lobbyName = lobbyNameSplit[1]
+                                val hostName = hostNameSplit[1]
+                                val gamePort: Int? = gamePortSplit[1].toIntOrNull()
                                 if (gamePort != null) {
-                                    val newLobby = Lobby(lobbyName, address.hostname, gamePort)
+                                    val newLobby = Lobby(
+                                        lobbyName,
+                                        hostName,
+                                        address.hostname,
+                                        gamePort
+                                    )
                                     if (foundLobbies.add(newLobby)) {
-                                        lobbyNameFlow.emit(Pair(nextId, lobbyName))
+                                        lobbyNameFlow.emit(Pair(nextId, "$lobbyName by $hostName"))
                                         lobbyMap.set(nextId, newLobby)
                                         nextId++
                                         log.i { "Received new lobby" }
@@ -75,8 +87,12 @@ class KtorClient(
                         }
                     }
                 } catch (e: CancellationException) {
-                    log.i { "Udp service cancelled" }
+                    log.i(e) { "Udp service cancelled" }
+                    throw e
+                } catch(e: Exception) {
+                    log.e(e) { "Unexpected exception" }
                 } finally {
+                    socket?.close()
                     selectorManager.close()
                     foundLobbies.clear()
                     lobbyMap.clear()
@@ -85,12 +101,7 @@ class KtorClient(
         }
     }
 
-    suspend fun removeLobby(id: Int): Boolean {
-        val result = lobbyMap.remove(id)
-        if (result != null) {
-            foundLobbies.remove(result)
-            return true
-        }
-        return false
+    suspend fun removeLobby(lobby: Lobby): Boolean {
+        return foundLobbies.remove(lobby)
     }
 }

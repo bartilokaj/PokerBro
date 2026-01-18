@@ -20,8 +20,8 @@ private val LightColorScheme = lightColorScheme(
     onSurface = Color(0xFFFFFFFF),      // text/icons on surface
     surfaceVariant = Color(0xFF2E4D3B), // subtle variant for cards, raised surfaces
     onSurfaceVariant = Color(0xFFEEEEEE),
-    error = Color(0xFFB00020),          // standard Material error
-    onError = Color(0xFFFFFFFF),
+    onError = Color(0xFFB00020),          // standard Material error
+    error = Color(0xFFFFFFFF),
     outline = Color(0xFFCCCCCC)         // borders, dividers
 )
 

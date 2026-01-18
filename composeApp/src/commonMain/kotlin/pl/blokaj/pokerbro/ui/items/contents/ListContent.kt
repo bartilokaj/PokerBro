@@ -32,7 +32,7 @@ fun <T> ListContent (
                     .clickable { component.onElementClicked(element) }
                     .padding(16.dp)
             ) {
-                Text(text = element.toString())
+                Text(text = component.toStringFn(element))
             }
         }
     }

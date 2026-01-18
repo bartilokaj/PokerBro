@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
+    id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
 kotlin {
@@ -50,6 +51,9 @@ kotlin {
             implementation(libs.ktor.server.cio)
             implementation(libs.ktor.server.core)
             implementation(libs.ktor.server.websockets)
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.cio)
+            implementation(libs.ktor.client.websockets)
             implementation(libs.ktor.network)
             implementation(libs.ktor.serialization.kotlinx.json)
             implementation(libs.kotlinx.serialization.json)
@@ -62,6 +66,9 @@ kotlin {
             implementation(libs.lifecycle)
             implementation(libs.essenty.lifecycle.coroutines)
             implementation(libs.kermit)
+            implementation(libs.kotlinx.serialization.cbor)
+            implementation(libs.atomicfu)
+
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -91,8 +98,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_22
+        targetCompatibility = JavaVersion.VERSION_22
     }
 }
 
@@ -116,3 +123,41 @@ compose.desktop {
         }
     }
 }
+
+tasks.register<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("fatJar") {
+    archiveFileName.set("pokerbro.jar")
+
+    // Include compiled classes
+    from(kotlin.targets.getByName("jvm").compilations.getByName("main").output)
+
+    // Include all runtime dependencies
+    configurations = listOf(project.configurations.getByName("jvmRuntimeClasspath"))
+
+    manifest {
+        attributes["Main-Class"] = "pl.blokaj.pokerbro.MainKt"
+    }
+
+    mergeServiceFiles() // optional but often needed
+}
+
+tasks.register<Exec>("packageExe") {
+    group = "distribution"
+    description = "Build Windows EXE using jpackage"
+
+    dependsOn("fatJar") // build fat JAR first
+
+    // working directory (project root)
+    workingDir = projectDir
+
+    // command line for jpackage
+    commandLine(
+        "jpackage",
+        "--type", "exe",
+        "--name", "PokerBro",
+        "--app-version", "1.0.0",
+        "--input", "$buildDir/libs",
+        "--main-jar", "pokerbro.jar",
+        "--win-console"
+    )
+}
+
