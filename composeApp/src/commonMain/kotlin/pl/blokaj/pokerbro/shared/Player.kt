@@ -1,12 +1,11 @@
 package pl.blokaj.pokerbro.shared
 
-import androidx.compose.runtime.mutableStateOf
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class PlayerData(
-    val name: String,
+    var id: Int,
 //    val imageString: String,
-    val funds: Int,
-    val id: Int
+    val name: String,
+    val funds: Int
 )

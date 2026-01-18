@@ -9,5 +9,5 @@ class WaitingComponent(
     val connectionState: StateFlow<ConnectionState>,
     val onWebsocketFailure: () -> Unit,
     val onWebsocketSuccess: () -> Unit
-) {
+): ComponentContext by componentContext {
 }

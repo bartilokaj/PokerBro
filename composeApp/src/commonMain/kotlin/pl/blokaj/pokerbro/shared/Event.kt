@@ -1,7 +1,10 @@
 package pl.blokaj.pokerbro.shared
 
-import io.ktor.websocket.CloseReason
+import io.ktor.websocket.Frame
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.cbor.Cbor
+import kotlinx.serialization.decodeFromByteArray
 import kotlin.jvm.JvmInline
 
 private const val eventCounterMask = 0x3FFFFF
@@ -9,14 +12,53 @@ private const val playerIdMask = eventCounterMask.inv()
 private const val playerIdLength = 10
 private const val eventCounterLength = 22
 
+/**
+ * Sealed interface for websocket communication.
+ */
 @Serializable
 sealed interface EventPayload {
+    /**
+     * Sender: Player
+     *
+     * Registering in the lobby, expecting answer with player id.
+     * Must be sent before sending any other event.
+     */
     @Serializable
     data class Register(val playerName: String): EventPayload
+
+    /**
+     * Sender: Server
+     *
+     * Acceptance of registration of a new player
+     */
     @Serializable
-    data class RegisterPlayers(val players: PlayerData): EventPayload
+    data class RegistrationAccepted(val playerId: Int): EventPayload
+
+    /**
+     * Sender: Server
+     *
+     * Details about every player (receiver included).
+     * Send at the start of the game to every player (but before Start payload).
+     */
+    @Serializable
+    data class RegisterOtherPlayers(val players: List<PlayerData>): EventPayload
+
+    /**
+     * Sender: Server
+     *
+     * Warning to the player.
+     * Mostly for debugging, currently server acknowledges wrong message,
+     * sends this payload and ignores.
+     * Payload includes last event id read.
+     */
     @Serializable
     data class Warning(val reason: String, val lastEventRead: EventId): EventPayload
+
+    /**
+     * Sender: Server
+     *
+     * Starts the game.
+     */
     @Serializable
     data class Start(val startingFunds: Int): EventPayload
 }
@@ -25,8 +67,32 @@ sealed interface EventPayload {
 data class Event(
     val eventId: EventId,
     val payload: EventPayload
-)
+) {
+    @OptIn(ExperimentalSerializationApi::class)
+    fun generateEventFrame(): Frame.Binary {
+        return Frame.Binary(
+            fin = true,
+            Cbor.encodeToByteArray<Event>(
+                Event.serializer(),
+                this
+            )
+        )
+    }
+}
 
+@OptIn(ExperimentalSerializationApi::class)
+fun Frame.getEvent(): Event {
+    return Cbor.decodeFromByteArray<Event>(
+        this.data
+    )
+}
+
+/**
+ * ID that must be included in every event.
+ * It is 32-bit integer, whose first 10 bits are player id
+ * and the remaining 22 are event counter.
+ * Server's ID is always 0.
+ */
 @Serializable
 @JvmInline
 value class EventId(val id: Int) {

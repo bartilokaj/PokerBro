@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -27,7 +28,7 @@ import pl.blokaj.pokerbro.ui.items.contents.TextInputField
 
 @Composable
 fun JoiningScreen(joiningComponent: JoiningComponent) {
-    var playerName by remember { mutableStateOf(joiningComponent.initialPlayerName) }
+    val playerName by joiningComponent.localName.subscribeAsState()
 
     Column(
         modifier = Modifier
@@ -43,16 +44,17 @@ fun JoiningScreen(joiningComponent: JoiningComponent) {
         ProfilePicture(joiningComponent.profilePictureComponent)
 
         Row(
-            modifier = Modifier.fillMaxWidth(0.85f)
+            modifier = Modifier.fillMaxWidth(0.85f),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Player name:",
+                text = "PLAYER NAME",
                 modifier = Modifier
                     .fillMaxWidth(0.3f)
             )
             TextInputField(
                 value = playerName,
-                onValueChange = { playerName = it },
+                onValueChange = { joiningComponent.localName.value = it },
             )
         }
 

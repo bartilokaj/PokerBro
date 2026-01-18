@@ -1,6 +1,7 @@
 package pl.blokaj.pokerbro.ui.items.contents
 
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -15,6 +16,8 @@ fun ConfirmationDialog(
         onDismissRequest = onDismiss,
         title = { Text("Confirmation") },
         text = { Text(message) },
+        containerColor = MaterialTheme.colorScheme.surface,
+        textContentColor = MaterialTheme.colorScheme.onSurface,
         confirmButton = {
             TextButton(onClick = onConfirm) {
                 Text("Yes")

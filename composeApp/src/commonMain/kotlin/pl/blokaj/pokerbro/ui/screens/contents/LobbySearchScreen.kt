@@ -1,9 +1,11 @@
 package pl.blokaj.pokerbro.ui.screens.contents
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -34,26 +36,32 @@ fun LobbySearchScreen(
 ) {
     val selectedLobby by lobbySearchComponent.selectedLobby.collectAsState()
 
-    Column(
+    Box(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(8.dp),
-        verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.CenterHorizontally
+            .fillMaxWidth(),
+        contentAlignment = Alignment.TopCenter
     ) {
-        Spacer(modifier = Modifier.height(30.dp))
-        Text(text = "Found lobbies", style = MaterialTheme.typography.headlineLarge)
-        Spacer(modifier = Modifier.height(24.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(8.dp),
+            verticalArrangement = Arrangement.Top,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(30.dp))
+            Text(text = "Found lobbies", style = MaterialTheme.typography.headlineLarge)
+            Spacer(modifier = Modifier.height(24.dp))
 
-        ListContent(lobbySearchComponent.listComponent)
-    }
+            ListContent(lobbySearchComponent.listComponent)
+        }
 
-    selectedLobby?.let { lobbyPair ->
-        ConfirmationDialog(
-            message = "Do you want to join ${lobbySearchComponent.listComponent.toStringFn(lobbyPair)}?",
-            onConfirm = { lobbySearchComponent.onLobbyConfirmed(lobbyPair) },
-            onDismiss = { lobbySearchComponent.onLobbyDismissed() }
-        )
+        selectedLobby?.let { lobbyPair ->
+            ConfirmationDialog(
+                message = "Do you want to join ${lobbySearchComponent.listComponent.toStringFn(lobbyPair)}?",
+                onConfirm = { lobbySearchComponent.onLobbyConfirmed(lobbyPair) },
+                onDismiss = { lobbySearchComponent.onLobbyDismissed() }
+            )
 
+        }
     }
 }

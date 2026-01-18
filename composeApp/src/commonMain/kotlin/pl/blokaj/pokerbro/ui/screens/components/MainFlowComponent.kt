@@ -4,16 +4,17 @@ import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.router.stack.StackNavigation
 import com.arkivanov.decompose.router.stack.bringToFront
 import com.arkivanov.decompose.router.stack.childStack
+import com.arkivanov.decompose.value.Value
 import pl.blokaj.pokerbro.ui.services.implementations.PlaceholderPicker
 import kotlin.String
 
 
 class MainFlowComponent(
     private val componentContext: ComponentContext,
-    private val initialPlayerName: String,
-    private val initialPlayerPicturePath: String,
-    private val initialLobbyName: String,
-    private val initialStartingFunds: Int,
+    private val initialPlayerName: Value<String>,
+    private val initialPlayerPicturePath: Value<String>,
+    private val initialLobbyName: Value<String>,
+    private val initialStartingFunds: Value<Int>,
     private val onLobbySearch: (playerName: String) -> Unit,
     private val onHostingStart:  (playerName: String, lobbyName: String, startingFunds: Int) -> Unit,
     private val onWrongInput: (reason: String) -> Unit

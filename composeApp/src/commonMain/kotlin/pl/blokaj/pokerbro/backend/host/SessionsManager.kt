@@ -23,17 +23,15 @@ class SessionsManager(
     private val eventBus: EventBus
 ) {
     // many coroutines can access
-    private val connectionMap: ThreadSafeMap<Int, Job> = ThreadSafeMap(HashMap())
+    private val connectionMap: ThreadSafeMap<Int, Job> = ThreadSafeMap(LinkedHashMap())
     private val log = withTag("ConnectionManager")
-
-    suspend fun addConnection(session: DefaultWebSocketSession, playerId: Int) {
+    private val ipToPlayerIdMap = ThreadSafeMap<String, Int>(HashMap())
+    fun addConnection(session: DefaultWebSocketSession, sessionIp: String, playerId: Int) {
         val newJob = scope.launch {
             try {
                 eventBus.events.collect { event ->
-                    val jsonString = Json.encodeToString<Event>(event)
-                    val frame = Frame.Text(jsonString)
                     try {
-                        session.send(frame)
+                        session.send(event.generateEventFrame())
                     } catch (e: ClosedSendChannelException) {
                         log.e(e) { "Session closed, removing" }
                         connectionMap.remove(playerId)?.cancel()
@@ -46,28 +44,20 @@ class SessionsManager(
                 }
             } catch (e: CancellationException) {
                 log.i(e) { "Coroutine stopped" }
+                throw e
             } catch (e: Exception) {
                 log.e(e) { "Unexpected exception" }
             }
         }
-        connectionMap.set(playerId, newJob)
+        scope.launch {
+            connectionMap.set(playerId, newJob)
+        }
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
-    fun sendWarning(
-        session: DefaultWebSocketSession,
-        reason: String,
-        lastEventRead: EventId,
-        eventId: EventId
-    ) {
+    fun sendSingleFrame(session: DefaultWebSocketSession, frame: Frame) {
         scope.launch {
             try {
-                val warningEvent = Event(eventId, EventPayload.Warning(reason, lastEventRead))
-                val byteArray = Cbor.encodeToByteArray(
-                    Event.serializer(),
-                    warningEvent
-                )
-                session.send(Frame.Binary(true, byteArray))
+                session.send(frame)
             } catch (e: ClosedSendChannelException) {
                 log.e(e) { "Session closed (will be removed next time something will be send)" }
             } catch (e: IOException) {

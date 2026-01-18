@@ -11,7 +11,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import pl.blokaj.pokerbro.backend.LanNetworkManager
@@ -23,12 +24,12 @@ private const val SEARCHING_PORT = 57286
 
 object ClientUdpDiscoveryService {
     private val log = Logger.withTag("ClientUdpService")
-    private val foundLobbies = ThreadSafeSet<Lobby>(HashSet())
+    private val messages = HashSet<String>()
 
     fun CoroutineScope.startGameSearching(
         lanNetworkManager: LanNetworkManager,
         lobbyMap: ThreadSafeMap<Int, Lobby>,
-        lobbyNameFlow: MutableSharedFlow<Pair<Int, String>>
+        lobbyNameFlow: MutableStateFlow<List<Pair<Int, String>>>
     ): Job {
         return launch {
             lanNetworkManager.withBroadcastLock {
@@ -47,6 +48,9 @@ object ClientUdpDiscoveryService {
 
                     var nextId = 0
                     log.i { "Starting to listen..." }
+                    for (i in 10..11) {
+                        lobbyNameFlow.update { it + Pair(i, "Dummies$i by dummy$i") }
+                    }
                     while (isActive) {
                         val result = receivingChannel.receiveCatching()
                         val datagram = result.getOrNull()!!
@@ -71,13 +75,14 @@ object ClientUdpDiscoveryService {
                                 val gamePort: Int? = gamePortSplit[1].toIntOrNull()
                                 if (gamePort != null) {
                                     val newLobby = Lobby(
+                                        nextId,
                                         lobbyName,
                                         hostName,
                                         address.hostname,
                                         gamePort
                                     )
-                                    if (foundLobbies.add(newLobby)) {
-                                        lobbyNameFlow.emit(Pair(nextId, "$lobbyName by $hostName"))
+                                    if (messages.add(message)) {
+                                        lobbyNameFlow.update { it + Pair(nextId, "$lobbyName by $hostName") }
                                         lobbyMap.set(nextId, newLobby)
                                         nextId++
                                         log.i { "Received new lobby" }
@@ -94,14 +99,16 @@ object ClientUdpDiscoveryService {
                 } finally {
                     socket?.close()
                     selectorManager.close()
-                    foundLobbies.clear()
+                    messages.clear()
                     lobbyMap.clear()
+                    lobbyNameFlow.update { emptyList() }
                 }
             }
         }
     }
 
-    suspend fun removeLobby(lobby: Lobby): Boolean {
-        return foundLobbies.remove(lobby)
+    fun removeLobby(lobby: Lobby): Boolean {
+        val lobbyMessage = "LobbyName:${lobby.lobbyName};Host:${lobby.hostName};Port:${lobby.port}"
+        return messages.remove(lobbyMessage)
     }
 }

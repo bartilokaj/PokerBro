@@ -4,23 +4,17 @@ import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.childContext
 import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
-import io.ktor.http.ContentDisposition.Companion.File
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.launch
-import pl.blokaj.pokerbro.ui.items.components.FlowListComponent
 import pl.blokaj.pokerbro.ui.items.components.ProfilePictureComponent
 import pl.blokaj.pokerbro.ui.services.interfaces.ProfilePicturePicker
 
 class JoiningComponent (
     componentContext: ComponentContext,
     profilePicturePicker: ProfilePicturePicker,
-    val initialPlayerName: String,
+    private val initialPlayerName: Value<String>,
     val onLobbySearch: (playerName: String) -> Unit,
     val onWrongInput: (reason: String) -> Unit
 ) : ComponentContext by componentContext {
+    val localName = MutableValue<String>(initialPlayerName.value)
     val profilePictureComponent = ProfilePictureComponent(
         componentContext = childContext("profile picture"),
         setPath = {}

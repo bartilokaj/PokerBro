@@ -5,5 +5,6 @@ enum class ConnectionState {
     DISCONNECTED,
     CONNECTING,
     CONNECTED,
-    FAILED
+    FAILED,
+    GAME
 }

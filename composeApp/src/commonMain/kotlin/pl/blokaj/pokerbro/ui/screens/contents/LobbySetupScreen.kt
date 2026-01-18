@@ -28,6 +28,7 @@ import androidx.compose.ui.layout.ModifierLocalBeyondBoundsLayout
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
+import com.arkivanov.decompose.value.MutableValue
 import pl.blokaj.pokerbro.ui.screens.components.LobbySetupComponent
 import pl.blokaj.pokerbro.ui.items.contents.ProfilePicture
 import pl.blokaj.pokerbro.ui.items.contents.TextInputField
@@ -36,9 +37,9 @@ import pl.blokaj.pokerbro.ui.items.contents.TextInputField
 fun HostingScreen(
     lobbySetupComponent: LobbySetupComponent
 ) {
-    var playerName by remember { mutableStateOf(lobbySetupComponent.initialPlayerName) }
-    var lobbyName by remember { mutableStateOf(lobbySetupComponent.initialLobbyName) }
-    var startingFunds by remember { mutableStateOf(lobbySetupComponent.initialStartingFunds.toString()) }
+    val playerName by lobbySetupComponent.playerName.subscribeAsState()
+    val lobbyName by lobbySetupComponent.lobbyName.subscribeAsState()
+    val startingFunds by lobbySetupComponent.startingFunds.subscribeAsState()
     val scrollState = rememberScrollState()
 
     Column(
@@ -63,39 +64,39 @@ fun HostingScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "PLAYER NAME:",
+                    text = "PLAYER NAME",
                     modifier = Modifier
                         .fillMaxWidth(0.3f)
                 )
                 TextInputField(
                     value = playerName,
-                    onValueChange = { playerName = it },
+                    onValueChange = { lobbySetupComponent.playerName.value = it },
                 )
             }
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "LOBBY NAME:",
+                    text = "LOBBY NAME",
                     modifier = Modifier
                         .fillMaxWidth(0.3f)
                 )
                 TextInputField(
                     value = lobbyName,
-                    onValueChange = { lobbyName = it },
+                    onValueChange = { lobbySetupComponent.lobbyName.value = it },
                 )
             }
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "STARTING FUNDS:",
+                    text = "STARTING FUNDS",
                     modifier = Modifier
                         .fillMaxWidth(0.3f)
                 )
                 TextInputField(
                     value = startingFunds,
-                    onValueChange = { startingFunds = it },
+                    onValueChange = { lobbySetupComponent.startingFunds.value = it },
                 )
             }
         }
@@ -104,30 +105,30 @@ fun HostingScreen(
         Button(
             onClick = {
                 var valuesCheck = true
-                if (playerName.isEmpty()) {
+                if (lobbySetupComponent.playerName.value.isEmpty()) {
                     valuesCheck = false
                     lobbySetupComponent.onWrongInput("Player name is required")
-                } else if (!(playerName.all { it.isLetterOrDigit() })) {
+                } else if (!(lobbySetupComponent.playerName.value.all { it.isLetterOrDigit() })) {
                     valuesCheck = false
                     lobbySetupComponent.onWrongInput("Player name should only have letters or digits")
-                } else if (playerName.length > 255) {
+                } else if (lobbySetupComponent.playerName.value.length > 255) {
                     valuesCheck = false
                     lobbySetupComponent.onWrongInput("Max length of player name is 255")
                 }
 
-                if (lobbyName.isEmpty()) {
+                if (lobbySetupComponent.lobbyName.value.isEmpty()) {
                     valuesCheck = false
                     lobbySetupComponent.onWrongInput("Lobby name is required")
-                } else if (!(lobbyName.all { it.isLetterOrDigit() })) {
+                } else if (!(lobbySetupComponent.lobbyName.value.all { it.isLetterOrDigit() })) {
                     valuesCheck = false
                     lobbySetupComponent.onWrongInput("Lobby name should only have letters or digits")
-                } else if (lobbyName.length > 255) {
+                } else if (lobbySetupComponent.lobbyName.value.length > 255) {
                     valuesCheck = false
                     lobbySetupComponent.onWrongInput("Max length of lobby name is 255")
                 }
 
-                val supposedStartingFunds = startingFunds.toIntOrNull()
-                if (startingFunds.isEmpty()) {
+                val supposedStartingFunds = lobbySetupComponent.startingFunds.value.toIntOrNull()
+                if (lobbySetupComponent.startingFunds.value.isEmpty()) {
                     valuesCheck = false
                     lobbySetupComponent.onWrongInput("Starting funds are required")
                 } else if (supposedStartingFunds == null || supposedStartingFunds <= 0) {
@@ -136,7 +137,11 @@ fun HostingScreen(
                 }
 
                 if (valuesCheck) {
-                    lobbySetupComponent.onHostingStart(playerName, lobbyName, startingFunds.toInt())
+                    lobbySetupComponent.onHostingStart(
+                        lobbySetupComponent.playerName.value,
+                        lobbySetupComponent.lobbyName.value,
+                        lobbySetupComponent.startingFunds.value.toInt()
+                    )
                 }
             },
             content = { Text(text = "Start hosting game") },

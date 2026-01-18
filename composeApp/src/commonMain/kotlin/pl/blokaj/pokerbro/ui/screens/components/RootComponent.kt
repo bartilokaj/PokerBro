@@ -1,35 +1,27 @@
 package pl.blokaj.pokerbro.ui.screens.components
 
-import androidx.compose.runtime.collectAsState
 import co.touchlab.kermit.Logger
 import com.arkivanov.decompose.ComponentContext
-import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.arkivanov.decompose.router.stack.StackNavigation
 import com.arkivanov.decompose.router.stack.bringToFront
 import com.arkivanov.decompose.router.stack.childStack
+import com.arkivanov.decompose.router.stack.pop
 import com.arkivanov.decompose.router.stack.replaceAll
 import com.arkivanov.decompose.value.MutableValue
-import com.arkivanov.decompose.value.Value
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pl.blokaj.pokerbro.backend.LanNetworkManager
 import pl.blokaj.pokerbro.backend.client.ClientConnectionManager
 import pl.blokaj.pokerbro.backend.host.HostingManager
-import pl.blokaj.pokerbro.shared.Lobby
 import pl.blokaj.pokerbro.shared.PlayerData
 import pl.blokaj.pokerbro.ui.screens.components.RootComponent.StageChild.*
-import pl.blokaj.pokerbro.utility.ThreadSafeSet
 
 
 class RootComponent(
@@ -37,16 +29,19 @@ class RootComponent(
     private val lanNetworkManager: LanNetworkManager
 ): ComponentContext by componentContext {
     private var stageStack = StackNavigation<Stage>()
-    private var playerName: String = "Player"
-    private var lobbyName: String = "Lobby"
-    private var startingFunds: Int = 1
-    private var playerPicturePath = ""
+    private val playerName = MutableValue("Player")
+    private val lobbyName = MutableValue("Lobby")
+    private val startingFunds = MutableValue(1)
+    private val playerPicturePath = MutableValue("")
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val clientConnectionManager = ClientConnectionManager(lanNetworkManager, { addError(it)} )
     private val hostingManager = HostingManager(lanNetworkManager)
     private val log = Logger.withTag("Root")
     private val _errors = MutableStateFlow<List<String>>(emptyList())
     val errors: StateFlow<List<String>> = _errors
+
+    private lateinit var playerData: PlayerData
+    private val players = MutableStateFlow<LinkedHashMap<Int, PlayerData>>(LinkedHashMap())
 
     val childStack = componentContext.childStack(
         source = stageStack,
@@ -62,7 +57,7 @@ class RootComponent(
                     onHostingStart = { playerName: String, lobbyName: String, startingFunds: Int ->
                         onHostingStarted(playerName, lobbyName, startingFunds)
                     },
-                    initialPlayerName = playerName,
+                    initialPlayerName = this.playerName,
                     initialPlayerPicturePath = playerPicturePath,
                     initialLobbyName = lobbyName,
                     initialStartingFunds = startingFunds,
@@ -82,6 +77,7 @@ class RootComponent(
                 Stage.ServerStarting -> ServerStarting(
                     HostingStartedComponent(
                         context,
+                        hostingManager.getPlayersFlow()
                     )
                 )
                 Stage.Game -> Game(
@@ -94,7 +90,7 @@ class RootComponent(
                         context,
                         clientConnectionManager.connectionState,
                         onWebsocketFailure = {
-                            stageStack.replaceAll(Stage.Flow)
+                            stageStack.pop()
                         },
                         onWebsocketSuccess = {
                             stageStack.replaceAll(Stage.Waiting)
@@ -124,7 +120,7 @@ class RootComponent(
 
 
     fun onSearchStarted(playerName: String) {
-        this.playerName = playerName
+        this.playerName.value = playerName
         scope.launch {
             lanNetworkManager.ensureGranted()
         }
@@ -140,9 +136,9 @@ class RootComponent(
         scope.launch {
             lanNetworkManager.ensureGranted()
         }
-        this.playerName = playerName
-        this.lobbyName = lobbyName
-        this.startingFunds = startingFunds
+        this.playerName.value = playerName
+        this.lobbyName.value = lobbyName
+        this.startingFunds.value = startingFunds
         hostingManager.startHosting(
             lobbyName,
             startingFunds,
@@ -152,10 +148,16 @@ class RootComponent(
     }
 
     fun onLobbyFound(lobbyPair: Pair<Int, String>) {
+        playerData = PlayerData(
+            -1,
+            playerName.value,
+            -1
+        )
         stageStack.bringToFront(Stage.Waiting)
         clientConnectionManager.startWebSocketJob(
             lobbyPair,
-            playerName
+            playerData,
+            players
         )
     }
 

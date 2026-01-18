@@ -16,12 +16,13 @@ private val LightColorScheme = lightColorScheme(
     onSecondary = Color(0xFF000000),    // text/icons on secondary -> black
     background = Color(0xFF35654D),     // poker table green
     onBackground = Color(0xFFFFFFFF),   // text/icons on background
-    surface = Color(0xFF3D7257),        // surfaces like cards, panels
-    onSurface = Color(0xFFFFFFFF),      // text/icons on surface
+    surface = Color(0xFFFFFFF0),        // surfaces like cards, panels
+    onSurface = Color(0xFF2B2A28),      // text/icons on surface
     surfaceVariant = Color(0xFF2E4D3B), // subtle variant for cards, raised surfaces
     onSurfaceVariant = Color(0xFFEEEEEE),
+    error = Color(0xFFFFFFF0),
     onError = Color(0xFFB00020),          // standard Material error
-    error = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFFFFFFFF),
     outline = Color(0xFFCCCCCC)         // borders, dividers
 )
 

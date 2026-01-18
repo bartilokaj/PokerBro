@@ -4,13 +4,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableStateFlow
 import pl.blokaj.pokerbro.backend.LanNetworkManager
 import pl.blokaj.pokerbro.shared.PlayerData
-import pl.blokaj.pokerbro.ui.screens.contents.GameScreen
-import pl.blokaj.pokerbro.utility.ThreadSafeMap
-import pl.blokaj.pokerbro.utility.ThreadSafeSet
 import kotlin.random.Random
 
 class HostingManager(
@@ -18,7 +14,7 @@ class HostingManager(
 ) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val gamePort = Random.nextInt(50000, 60000)
-    private val gameServer = GameServer(scope, gamePort)
+    private val serverWebsocket = ServerWebsocket(scope, gamePort)
 
     fun startHosting(
         lobbyName: String,
@@ -33,7 +29,15 @@ class HostingManager(
                 host
             )
         }
-        gameServer.start()
+        serverWebsocket.start(startingFunds)
+    }
+
+    fun startGame() {
+        serverWebsocket.startGame()
+    }
+
+    fun getPlayersFlow(): MutableStateFlow<List<PlayerData>> {
+        return serverWebsocket.getPlayersFlow()
     }
 
 }

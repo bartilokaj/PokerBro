@@ -2,7 +2,6 @@ package pl.blokaj.pokerbro.backend.host
 
 
 import co.touchlab.kermit.Logger
-import io.ktor.client.request.invoke
 import io.ktor.server.engine.*
 import io.ktor.server.application.*
 import io.ktor.server.websocket.*
@@ -10,31 +9,26 @@ import io.ktor.server.cio.*
 import io.ktor.server.plugins.origin
 import io.ktor.server.routing.routing
 import io.ktor.utils.io.CancellationException
-import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerializationException
-import kotlinx.serialization.cbor.Cbor
-import kotlinx.serialization.decodeFromByteArray
-import pl.blokaj.pokerbro.shared.Event
 import pl.blokaj.pokerbro.shared.EventId
 import pl.blokaj.pokerbro.shared.PlayerData
-import pl.blokaj.pokerbro.utility.ThreadSafeMap
-import kotlin.time.Duration
+import pl.blokaj.pokerbro.shared.getEvent
 import kotlin.time.Duration.Companion.seconds
 
 
-class GameServer(
+class ServerWebsocket(
     private val scope: CoroutineScope,
-    private val gamePort: Int
+    private val gamePort: Int,
 ) {
     private val logger = Logger.withTag("GameServer")
     private val eventBus = EventBus()
-    private var sessionsManager: SessionsManager = SessionsManager(scope, eventBus)
-    private val playerMap: ThreadSafeMap<String, PlayerData> = ThreadSafeMap(LinkedHashMap())
-    private val eventCounter = atomic(0)
+    private val sessionsManager: SessionsManager = SessionsManager(scope, eventBus)
+    private lateinit var eventManager: ServerEventManager
 
-    fun start() {
+    fun start(startingFunds: Int) {
         embeddedServer(
             CIO,
             port = gamePort,
@@ -42,14 +36,14 @@ class GameServer(
         ) {
             module(eventBus)
         }.start(wait = false)
+        eventManager = ServerEventManager(
+            sessionsManager,
+            eventBus,
+            startingFunds
+        )
         logger.i { "GameServer started on port $gamePort" }
     }
 
-    private fun handleEvent() {
-        TODO()
-    }
-
-    @OptIn(ExperimentalSerializationApi::class)
     private fun Application.module(bus: EventBus) {
         install(WebSockets) {
             pingPeriod = 15.seconds      // send ping every 15s
@@ -58,29 +52,43 @@ class GameServer(
 
         routing {
             webSocket("/game") {
-                logger.i { "Started new connection with ${call.request.origin.remoteHost}:${call.request.origin.remotePort}" }
+                val sessionIp = call.request.origin.remoteHost
+                val sessionPort = call.request.origin.remotePort
+                logger.i { "Started new connection with $sessionIp:$sessionPort" }
                 var lastEventId = EventId(0)
                 try {
                     for (frame in incoming) {
-                        val event = Cbor.decodeFromByteArray<Event>(frame.data)
+                        val event = frame.getEvent()
                         lastEventId = event.eventId
-                        handleEvent()
+                        eventManager.handleEvent(this, event, sessionIp)
                     }
                 } catch (e: CancellationException) {
-                    logger.i(e) { "Client ended session" }
+                    logger.i(e) { "Client $sessionIp:$sessionPort ended session" }
+                    throw e
                 } catch (e: SerializationException) {
-                    logger.w(e) { "Bad format from client" }
-                    sessionsManager.sendWarning(
+                    logger.w(e) { "Bad format from client $sessionIp:$sessionPort" }
+                    eventManager.sendWarning(
                         this,
-                        "Bad massage format",
-                        lastEventId,
-                        EventId(eventCounter.getAndIncrement())
+                        "Bad format from client",
+                        lastEventId
                     )
                 } catch (e: Exception) {
                     logger.e(e) { "WebSocket failure" }
+                } finally {
+                    eventManager.removePlayerData(sessionIp)
                 }
             }
         }
+    }
+
+    fun startGame() {
+        scope.launch {
+            eventManager.startGame()
+        }
+    }
+
+    fun getPlayersFlow(): MutableStateFlow<List<PlayerData>> {
+        return eventManager.players
     }
 }
 

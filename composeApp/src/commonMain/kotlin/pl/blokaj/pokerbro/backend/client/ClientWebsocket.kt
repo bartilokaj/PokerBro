@@ -1,5 +1,6 @@
 package pl.blokaj.pokerbro.backend.client
 
+import androidx.compose.runtime.MutableState
 import co.touchlab.kermit.Logger
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
@@ -34,14 +35,14 @@ object ClientWebsocket {
     private val log = Logger.withTag("ClientWebSocket")
 
     @OptIn(ExperimentalSerializationApi::class)
-    suspend fun CoroutineScope.connectToGameServer(
+    fun CoroutineScope.connectToGameServer(
         lobby: Lobby,
-        playerName: String,
         connectionStateFlow: MutableStateFlow<ConnectionState>,
-        onError: (message: String) -> Unit
+        playerData: PlayerData,
+        players: MutableStateFlow<LinkedHashMap<Int, PlayerData>>,
+        onError: (message: String, lobby: Lobby) -> Unit
     ): Job {
         return launch {
-
             val client = HttpClient(CIO) {
                 install(WebSockets)
                 engine {
@@ -62,28 +63,29 @@ object ClientWebsocket {
                     path = "/game"
                 ) {
                     connectionStateFlow.value = ConnectionState.CONNECTED
+                    val eventManager = ClientEventManager(
+                        this,
+                        playerData,
+                        players,
+                        onGameStart = {
+                            connectionStateFlow.value = ConnectionState.GAME
+                        }
+                    )
                     log.i { "Connected to ${lobby.ip}:${lobby.port}" }
                     try {
-                        this.send(
-                            Frame.Binary(
-                                true, Cbor.encodeToByteArray(
-                                    Event.serializer(),
-                                    Event(EventId(0), EventPayload.Register(playerName))
-                                )
-                            )
-                        )
-
+                        eventManager.register()
                         for (frame in incoming) {
-                            clientHandleEvent()
+
                         }
                     } catch (e: ClosedSendChannelException) {
-                        onError("Lobby ${lobby.lobbyName} closed connection")
+                        onError("Lobby ${lobby.lobbyName} closed connection", lobby)
                         log.w(e) { "Server closed connection" }
                     }
                     connectionStateFlow.value = ConnectionState.DISCONNECTED
+
                 }
             } catch (e: Exception) {
-                onError("Failed to connect to server")
+                onError("Failed to connect to server", lobby)
                 when (e) {
                     is CancellationException -> throw e
                     is UnresolvedAddressException -> log.e(e) { "Invalid IP: ${lobby.ip}" }
@@ -99,6 +101,4 @@ object ClientWebsocket {
             }
         }
     }
-
-    fun clientHandleEvent() = { }
 }

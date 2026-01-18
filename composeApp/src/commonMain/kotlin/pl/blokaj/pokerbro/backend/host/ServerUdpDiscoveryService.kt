@@ -5,6 +5,7 @@ import io.ktor.network.selector.SelectorManager
 import io.ktor.network.sockets.Datagram
 import io.ktor.network.sockets.InetSocketAddress
 import io.ktor.network.sockets.aSocket
+import io.ktor.utils.io.CancellationException
 import io.ktor.utils.io.core.buildPacket
 import io.ktor.utils.io.core.writeText
 import kotlinx.coroutines.CoroutineScope
@@ -56,6 +57,9 @@ object ServerUdpDiscoveryService {
                         if (counter % 5 == 1) log.i { "Sent $counter broadcasts" }
                         delay(5.seconds)
                     }
+                } catch (e: CancellationException) {
+                    log.i(e) {"Service cancelled"}
+                    throw e
                 } finally {
                     selectorManager.close()
                 }

@@ -15,6 +15,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -34,6 +35,7 @@ fun ErrorPopup(
             .border(1.dp, Color.Gray, RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.error, RoundedCornerShape(12.dp))
             .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = message,
@@ -45,8 +47,9 @@ fun ErrorPopup(
         Icon(
             imageVector = Icons.Filled.Close,
             contentDescription = "Close",
+            tint = Color.Black,
             modifier = Modifier
-                .size(20.dp)
+                .size(25.dp)
                 .clickable { onDismiss(message) }
         )
     }
