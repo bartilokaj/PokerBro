@@ -10,13 +10,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.ClosedSendChannelException
 import kotlinx.coroutines.launch
 import kotlinx.io.IOException
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.json.Json
-import pl.blokaj.pokerbro.shared.Event
-import pl.blokaj.pokerbro.shared.EventId
-import pl.blokaj.pokerbro.shared.EventPayload
 import pl.blokaj.pokerbro.utility.ThreadSafeMap
-import kotlinx.serialization.cbor.Cbor
 
 class SessionsManager(
     private val scope: CoroutineScope,
@@ -24,12 +18,12 @@ class SessionsManager(
 ) {
     // many coroutines can access
     private val connectionMap: ThreadSafeMap<Int, Job> = ThreadSafeMap(LinkedHashMap())
-    private val log = withTag("ConnectionManager")
-    private val ipToPlayerIdMap = ThreadSafeMap<String, Int>(HashMap())
-    fun addConnection(session: DefaultWebSocketSession, sessionIp: String, playerId: Int) {
+    private val log = withTag("SessionsManager")
+    fun addConnection(session: DefaultWebSocketSession, playerId: Int) {
         val newJob = scope.launch {
             try {
                 eventBus.events.collect { event ->
+                    log.i { "New event from event bus: $event" }
                     try {
                         session.send(event.generateEventFrame())
                     } catch (e: ClosedSendChannelException) {
@@ -58,10 +52,12 @@ class SessionsManager(
         scope.launch {
             try {
                 session.send(frame)
-            } catch (e: ClosedSendChannelException) {
-                log.e(e) { "Session closed (will be removed next time something will be send)" }
-            } catch (e: IOException) {
-                log.e(e) { "Network error sending to session" }
+            } catch (e: Exception) {
+                when (e) {
+                    is ClosedSendChannelException -> log.w(e) { "Session closed" }
+                    is IOException -> log.w(e) { "Network error sending to session" }
+                    else -> log.e { "Unexpected exception" }
+                }
             }
         }
     }

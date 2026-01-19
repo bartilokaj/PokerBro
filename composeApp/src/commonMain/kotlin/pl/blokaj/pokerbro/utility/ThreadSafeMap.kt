@@ -1,6 +1,5 @@
 package pl.blokaj.pokerbro.utility
 
-import io.ktor.utils.io.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 

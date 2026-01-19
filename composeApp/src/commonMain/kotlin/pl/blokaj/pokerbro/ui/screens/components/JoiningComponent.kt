@@ -10,11 +10,11 @@ import pl.blokaj.pokerbro.ui.services.interfaces.ProfilePicturePicker
 class JoiningComponent (
     componentContext: ComponentContext,
     profilePicturePicker: ProfilePicturePicker,
-    private val initialPlayerName: Value<String>,
+    initialPlayerName: Value<String>,
     val onLobbySearch: (playerName: String) -> Unit,
     val onWrongInput: (reason: String) -> Unit
 ) : ComponentContext by componentContext {
-    val localName = MutableValue<String>(initialPlayerName.value)
+    val localName = MutableValue(initialPlayerName.value)
     val profilePictureComponent = ProfilePictureComponent(
         componentContext = childContext("profile picture"),
         setPath = {}

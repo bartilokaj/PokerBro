@@ -18,7 +18,6 @@ import kotlinx.coroutines.launch
 import pl.blokaj.pokerbro.backend.LanNetworkManager
 import pl.blokaj.pokerbro.shared.Lobby
 import pl.blokaj.pokerbro.utility.ThreadSafeMap
-import pl.blokaj.pokerbro.utility.ThreadSafeSet
 
 private const val SEARCHING_PORT = 57286
 

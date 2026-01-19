@@ -1,5 +1,5 @@
-### IMPORTANT
-first get Get-Content $env:USERPROFILE\.emulator_console_auth_token
-then telnet localhost 5554 (or other emulator port)
-auth {token}
-redir add udp:9001:8888
+# About
+Poker bro is an app that lets you play LAN poker with your friends. Currently, app supports gameplay, where server is
+just a synchronizer, not source of truth.
+# Support
+PokerBro works on desktop (JVM) and on android. IOS is not currently available.

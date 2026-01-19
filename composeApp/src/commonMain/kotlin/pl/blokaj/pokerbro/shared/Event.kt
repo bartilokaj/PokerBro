@@ -1,6 +1,6 @@
 package pl.blokaj.pokerbro.shared
 
-import io.ktor.websocket.Frame
+import io.ktor.websocket.*
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.cbor.Cbor
@@ -61,6 +61,18 @@ sealed interface EventPayload {
      */
     @Serializable
     data class Start(val startingFunds: Int): EventPayload
+
+    @Serializable
+    data class PlaceBet(val bet: Int): EventPayload
+
+    @Serializable
+    data class TakePot(val amount: Int): EventPayload
+
+    @Serializable
+    data class AcceptedBet(val playerId: Int, val bet: Int, val potAfter: Int): EventPayload
+
+    @Serializable
+    data class PotTaken(val playerId: Int, val amount: Int, val potAfter: Int): EventPayload
 }
 
 @Serializable
@@ -72,8 +84,8 @@ data class Event(
     fun generateEventFrame(): Frame.Binary {
         return Frame.Binary(
             fin = true,
-            Cbor.encodeToByteArray<Event>(
-                Event.serializer(),
+            Cbor.encodeToByteArray(
+                serializer(),
                 this
             )
         )
@@ -97,7 +109,7 @@ fun Frame.getEvent(): Event {
 @JvmInline
 value class EventId(val id: Int) {
     val playerId: Int
-        get() = (id and playerIdMask) ushr playerIdLength
+        get() = (id and playerIdMask) ushr eventCounterLength
     val eventCounter: Int
         get() = (id and eventCounterMask)
 
@@ -107,5 +119,6 @@ value class EventId(val id: Int) {
             require(eventCounter in 0..0x3FFFFF) { "counter too large" }
             return EventId((playerId shl eventCounterLength) or (eventCounter and eventCounterMask))
         }
+
     }
 }

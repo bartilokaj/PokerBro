@@ -1,52 +1,40 @@
 package pl.blokaj.pokerbro.backend.client
 
-import androidx.compose.runtime.MutableState
 import co.touchlab.kermit.Logger
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
-import io.ktor.client.engine.cio.FailToConnectException
-import io.ktor.client.engine.cio.endpoint
-import io.ktor.client.network.sockets.ConnectTimeoutException
-import io.ktor.client.plugins.websocket.WebSocketException
+import io.ktor.client.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.network.sockets.*
+import io.ktor.client.plugins.websocket.*
+import io.ktor.http.*
+import io.ktor.util.network.*
+import io.ktor.utils.io.*
 import kotlinx.coroutines.CoroutineScope
-import pl.blokaj.pokerbro.shared.Lobby
-import pl.blokaj.pokerbro.shared.PlayerData
-import pl.blokaj.pokerbro.utility.ThreadSafeSet
-import io.ktor.client.plugins.websocket.WebSockets
-import io.ktor.client.plugins.websocket.webSocket
-import io.ktor.http.HttpMethod
-import io.ktor.http.content.EntityTagVersion
-import io.ktor.util.network.UnresolvedAddressException
-import io.ktor.utils.io.CancellationException
-import io.ktor.websocket.Frame
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.ClosedSendChannelException
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.cbor.Cbor
 import okio.IOException
-import pl.blokaj.pokerbro.shared.Event
-import pl.blokaj.pokerbro.shared.EventId
-import pl.blokaj.pokerbro.shared.EventPayload
-import pl.blokaj.pokerbro.utility.ThreadSafeMap
+import pl.blokaj.pokerbro.shared.Lobby
+import pl.blokaj.pokerbro.shared.getEvent
 
-object ClientWebsocket {
+object ClientWebsocketManager {
     private val log = Logger.withTag("ClientWebSocket")
+    private lateinit var eventManager: ClientEventManager
 
     @OptIn(ExperimentalSerializationApi::class)
     fun CoroutineScope.connectToGameServer(
-        lobby: Lobby,
         connectionStateFlow: MutableStateFlow<ConnectionState>,
-        playerData: PlayerData,
-        players: MutableStateFlow<LinkedHashMap<Int, PlayerData>>,
+        playerName: String,
+        lobby: Lobby,
         onError: (message: String, lobby: Lobby) -> Unit
     ): Job {
         return launch {
             val client = HttpClient(CIO) {
                 install(WebSockets)
                 engine {
-                    requestTimeout = 5000      // 5 seconds
+                    requestTimeout = 5000
                     endpoint {
                         connectTimeout = 5000  // connection timeout
                         keepAliveTime = 5000
@@ -62,20 +50,22 @@ object ClientWebsocket {
                     port = lobby.port,
                     path = "/game"
                 ) {
-                    connectionStateFlow.value = ConnectionState.CONNECTED
-                    val eventManager = ClientEventManager(
+                    eventManager = ClientEventManager(
                         this,
-                        playerData,
-                        players,
+                        playerName,
                         onGameStart = {
                             connectionStateFlow.value = ConnectionState.GAME
+                        },
+                        onError = { message ->
+                            onError(message, lobby)
                         }
                     )
+                    connectionStateFlow.value = ConnectionState.CONNECTED
                     log.i { "Connected to ${lobby.ip}:${lobby.port}" }
                     try {
                         eventManager.register()
                         for (frame in incoming) {
-
+                            eventManager.handleEvent(frame.getEvent())
                         }
                     } catch (e: ClosedSendChannelException) {
                         onError("Lobby ${lobby.lobbyName} closed connection", lobby)
@@ -85,6 +75,7 @@ object ClientWebsocket {
 
                 }
             } catch (e: Exception) {
+                connectionStateFlow.value = ConnectionState.FAILED
                 onError("Failed to connect to server", lobby)
                 when (e) {
                     is CancellationException -> throw e
@@ -95,10 +86,21 @@ object ClientWebsocket {
                     is IOException -> log.e(e) { "Network error" }
                     else -> log.e(e) { "Unexpected exception" }
                 }
-                connectionStateFlow.value = ConnectionState.FAILED
             } finally {
                 client.close()
             }
         }
+    }
+
+    fun getGameStateFlow(): StateFlow<GameState> {
+        return eventManager.gameStateFlow
+    }
+
+    suspend fun placeBet(bet: Int) {
+        eventManager.placeBet(bet)
+    }
+
+    suspend fun takePot(amount: Int) {
+        eventManager.takePot(amount)
     }
 }

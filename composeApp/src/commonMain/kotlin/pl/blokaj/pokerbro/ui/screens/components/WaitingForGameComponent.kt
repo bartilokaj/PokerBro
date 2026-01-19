@@ -4,10 +4,11 @@ import com.arkivanov.decompose.ComponentContext
 import kotlinx.coroutines.flow.StateFlow
 import pl.blokaj.pokerbro.backend.client.ConnectionState
 
-class WaitingComponent(
+class WaitingForGameComponent(
     componentContext: ComponentContext,
     val connectionState: StateFlow<ConnectionState>,
     val onWebsocketFailure: () -> Unit,
-    val onWebsocketSuccess: () -> Unit
-): ComponentContext by componentContext {
-}
+    val onWebsocketSuccess: () -> Unit,
+    val onGameStarted: () -> Unit,
+    val onBack: () -> Unit
+): ComponentContext by componentContext

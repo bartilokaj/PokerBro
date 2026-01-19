@@ -1,21 +1,13 @@
 package pl.blokaj.pokerbro.backend.client
 
-import androidx.compose.runtime.MutableState
 import co.touchlab.kermit.Logger
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import pl.blokaj.pokerbro.backend.LanNetworkManager
 import pl.blokaj.pokerbro.shared.Lobby
-import pl.blokaj.pokerbro.shared.PlayerData
 import pl.blokaj.pokerbro.utility.ThreadSafeMap
 
 class ClientConnectionManager(
@@ -28,8 +20,8 @@ class ClientConnectionManager(
     private val lobbyMap: ThreadSafeMap<Int, Lobby> = ThreadSafeMap(HashMap())
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val log = Logger.withTag("ClientConnectionManager")
-    private val _connectionState = MutableStateFlow(ConnectionState.PRECONNECTION)
-    val connectionState: StateFlow<ConnectionState> = _connectionState
+    private val _connectionStateFlow = MutableStateFlow(ConnectionState.PRECONNECTION)
+    val connectionStateFlow: StateFlow<ConnectionState> = _connectionStateFlow.asStateFlow()
 
     fun startSearchingJob() {
         log.i { "Starting search..." }
@@ -44,26 +36,29 @@ class ClientConnectionManager(
         }
     }
 
+    fun stopSearchingJob() {
+        log.i { "Stoping searching for lobby" }
+        searchingJob.cancel()
+    }
+
     fun startWebSocketJob(
         lobbyPair: Pair<Int, String>,
-        playerData: PlayerData,
-        players: MutableStateFlow<LinkedHashMap<Int, PlayerData>>
+        playerName: String
     ) {
-        scope.launch {
+        socketJob = scope.launch {
             val lobby = lobbyMap.get(lobbyPair.first)
             if (lobby == null) {
                 log.i { "Failed to find match to $lobbyPair" }
-                _connectionState.value = ConnectionState.FAILED
+                _connectionStateFlow.value = ConnectionState.FAILED
                 onError("Lobby ${lobbyPair.second} is no longer available")
                 removeLobby(lobbyPair)
             } else {
                 log.i { "Trying to connect to lobby ${lobby}..." }
-                socketJob = ClientWebsocket.run {
+                socketJob = ClientWebsocketManager.run {
                     scope.connectToGameServer(
+                        _connectionStateFlow,
+                        playerName,
                         lobby,
-                        _connectionState,
-                        playerData,
-                        players,
                         onError = { message, lobby ->
                             scope.launch {
                                 removeLobby(Pair(lobby.id, "${lobby.lobbyName} by ${lobby.hostName}"))
@@ -76,6 +71,39 @@ class ClientConnectionManager(
         }
     }
 
+    fun startLocalClient(
+        playerName: String,
+        lobbyName: String,
+        gamePort: Int
+    ) {
+        val localLobby = Lobby(
+            Int.MAX_VALUE,
+            lobbyName,
+            playerName,
+            ip = "127.0.0.1",
+            gamePort
+        )
+        log.i { "Starting local game client..." }
+        socketJob = ClientWebsocketManager.run {
+            scope.connectToGameServer(
+                _connectionStateFlow,
+                playerName,
+                localLobby,
+                onError = { message, lobby ->
+                    scope.launch {
+                        removeLobby(Pair(lobby.id, "${lobby.lobbyName} by ${lobby.hostName}"))
+                    }
+                    onError(message)
+                }
+            )
+        }
+    }
+
+    fun stopSocketJob() {
+        log.i { "Stopping client socket" }
+        socketJob.cancel()
+    }
+
     suspend fun removeLobby(lobbyPair: Pair<Int, String>) {
         val deletedLobby = lobbyMap.remove(lobbyPair.first)
         lobbyFlow.update { it - lobbyPair }
@@ -85,6 +113,22 @@ class ClientConnectionManager(
 
     fun getLobbyFlow(): StateFlow<List<Pair<Int, String>>> {
         return lobbyFlow.asStateFlow()
+    }
+
+    fun getGameStateFlow(): StateFlow<GameState> {
+        return ClientWebsocketManager.getGameStateFlow()
+    }
+
+    fun placeBet(bet: Int) {
+        scope.launch {
+            ClientWebsocketManager.placeBet(bet)
+        }
+    }
+
+    fun takePot(amount: Int) {
+        scope.launch {
+            ClientWebsocketManager.takePot(amount)
+        }
     }
 
 }
