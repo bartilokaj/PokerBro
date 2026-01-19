@@ -13,7 +13,7 @@ plugins {
 kotlin {
     androidTarget {
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
+            jvmTarget.set(JvmTarget.JVM_22)
         }
     }
 
@@ -109,7 +109,7 @@ dependencies {
 
 compose.desktop {
     application {
-        mainClass = "MainKt"
+        mainClass = "pl.blokaj.pokerbro.MainKt"
 
         nativeDistributions {
             targetFormats(
@@ -123,41 +123,3 @@ compose.desktop {
         }
     }
 }
-
-tasks.register<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("fatJar") {
-    archiveFileName.set("pokerbro.jar")
-
-    // Include compiled classes
-    from(kotlin.targets.getByName("jvm").compilations.getByName("main").output)
-
-    // Include all runtime dependencies
-    configurations = listOf(project.configurations.getByName("jvmRuntimeClasspath"))
-
-    manifest {
-        attributes["Main-Class"] = "pl.blokaj.pokerbro.MainKt"
-    }
-
-    mergeServiceFiles() // optional but often needed
-}
-
-tasks.register<Exec>("packageExe") {
-    group = "distribution"
-    description = "Build Windows EXE using jpackage"
-
-    dependsOn("fatJar") // build fat JAR first
-
-    // working directory (project root)
-    workingDir = projectDir
-
-    // command line for jpackage
-    commandLine(
-        "jpackage",
-        "--type", "exe",
-        "--name", "PokerBro",
-        "--app-version", "1.0.0",
-        "--input", "$buildDir/libs",
-        "--main-jar", "pokerbro.jar",
-        "--win-console"
-    )
-}
-

@@ -129,8 +129,8 @@ fun GameScreen(gameComponent: GameComponent) {
                 )
                 OutlinedButton(
                     onClick = {
-                        val amount = betInputValue.toIntOrNull()
-                        if (betInputValue.isNotEmpty() && amount != null && amount > 0) {
+                        val amount = takePotInputValue.toIntOrNull()
+                        if (takePotInputValue.isNotEmpty() && amount != null && amount > 0) {
                             gameComponent.onTakePot(amount)
                         }
                         else {
